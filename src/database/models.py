@@ -27,6 +27,26 @@ class MetricsHistory(Base):
         return f"<MetricsHistory(id={self.id}, model_name={self.model_name}, created_at={self.created_at})>"
 
 
+class PredictionHistory(Base):
+    """Modelo para almacenar el historial de predicciones.
+    
+    Cada vez que se realiza una predicción, se guarda automáticamente
+    un registro en esta tabla con los datos de entrada y el resultado.
+    """
+    
+    __tablename__ = "prediction_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    input_data = Column(JSON, nullable=False)  # Datos de entrada del cliente
+    prediction = Column(Integer, nullable=False, index=True)  # 0 o 1
+    probability = Column(String(20), nullable=False)  # Probabilidad como string
+    class_name = Column(String(10), nullable=False)  # "yes" o "no"
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    
+    def __repr__(self) -> str:
+        return f"<PredictionHistory(id={self.id}, prediction={self.prediction}, probability={self.probability}, created_at={self.created_at})>"
+
+
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Dependencia para obtener una sesión de base de datos.
     

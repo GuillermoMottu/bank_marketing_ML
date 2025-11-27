@@ -35,7 +35,7 @@ def create_input_field(
     placeholder: str = "",
     value: any = None,
     **kwargs
-) -> dbc.FormGroup:
+) -> html.Div:
     """Crea un campo de entrada para el formulario.
     
     Args:
@@ -47,7 +47,7 @@ def create_input_field(
         **kwargs: Argumentos adicionales para el componente.
     
     Returns:
-        FormGroup con el campo de entrada.
+        Div con el campo de entrada usando clases de Bootstrap.
     """
     if input_type == "number":
         component = dbc.Input(
@@ -73,8 +73,8 @@ def create_input_field(
             **kwargs
         )
     
-    return dbc.FormGroup([
-        dbc.Label(label, html_for=field_id),
+    return html.Div([
+        dbc.Label(label, html_for=field_id, className="form-label"),
         component
-    ])
+    ], className="mb-3")
 

@@ -6,7 +6,7 @@ from typing import Dict, List
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.models import MetricsHistory
+from src.database.models import MetricsHistory, PredictionHistory
 from src.utils.logging_config import logger
 
 
@@ -84,4 +84,66 @@ async def get_latest_metrics(db: AsyncSession) -> MetricsHistory | None:
     record = result.scalar_one_or_none()
     
     return record
+
+
+async def create_prediction_record(
+    db: AsyncSession,
+    input_data: Dict,
+    prediction: int,
+    probability: float,
+    class_name: str
+) -> PredictionHistory:
+    """Crea un nuevo registro en la tabla prediction_history.
+    
+    Args:
+        db: Sesión de base de datos.
+        input_data: Diccionario con los datos de entrada del cliente.
+        prediction: Predicción binaria (0 o 1).
+        probability: Probabilidad de la predicción.
+        class_name: Nombre de la clase ("yes" o "no").
+    
+    Returns:
+        Registro creado.
+    """
+    logger.info(f"Guardando predicción en base de datos: {class_name} (probabilidad: {probability:.4f})")
+    
+    prediction_record = PredictionHistory(
+        input_data=input_data,
+        prediction=prediction,
+        probability=f"{probability:.4f}",
+        class_name=class_name,
+        created_at=datetime.now()
+    )
+    
+    db.add(prediction_record)
+    await db.commit()
+    await db.refresh(prediction_record)
+    
+    logger.info(f"Predicción guardada con ID: {prediction_record.id}")
+    
+    return prediction_record
+
+
+async def get_all_predictions(
+    db: AsyncSession,
+    limit: int = 100
+) -> List[PredictionHistory]:
+    """Obtiene todos los registros de predicciones ordenados por fecha descendente.
+    
+    Args:
+        db: Sesión de base de datos.
+        limit: Número máximo de registros a retornar.
+    
+    Returns:
+        Lista de registros de predicciones.
+    """
+    logger.info(f"Obteniendo últimos {limit} registros de predicciones...")
+    
+    query = select(PredictionHistory).order_by(desc(PredictionHistory.created_at)).limit(limit)
+    result = await db.execute(query)
+    records = result.scalars().all()
+    
+    logger.info(f"Se encontraron {len(records)} registros de predicciones")
+    
+    return list(records)
 

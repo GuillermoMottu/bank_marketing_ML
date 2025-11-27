@@ -16,58 +16,141 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual environments
 venv/
 ENV/
 env/
 .venv
+env.bak/
+venv.bak/
 
-# IDEs
+# IDEs y editores
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
 
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb_checkpoints
+.ipython/
 
-# Modelos y datos procesados
+# Modelos entrenados y artefactos
 models/*.pkl
 models/*.joblib
-data/processed/*
+models/*.h5
+models/*.hdf5
+models/*.pb
+models/*.onnx
+models/*.pt
+models/*.pth
+*.pkl
+*.joblib
 *.h5
 *.hdf5
+
+# Datos procesados y temporales
+data/processed/*
+data/temp/*
+*.csv.tmp
+*.parquet
+*.feather
 
 # Logs
 logs/
 *.log
+*.log.*
 
 # Environment variables
 .env
 .env.local
+.env.*.local
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
 
 # Docker
 .dockerignore
+docker-compose.override.yml
+*.dockerignore
 
-# Coverage
+# Coverage y testing
 .coverage
+.coverage.*
 htmlcov/
 .pytest_cache/
+.tox/
+.nox/
 coverage.xml
 *.cover
+*.py,cover
+.hypothesis/
+.cache
 
-# Mypy
+# Type checking y linting
 .mypy_cache/
 .dmypy.json
 dmypy.json
+.pytype/
+.pyre/
+py.typed
+
+# Archivos de documentación explicativa (mantener solo README.md principal)
+docs/*.md
+docker/README.md
+*.md
+!README.md
+
+# Archivos temporales
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.#*
+
+# Archivos de base de datos locales
+*.db
+*.sqlite
+*.sqlite3
+
+# Archivos de backup
+*.backup
+*.old
+
+# Archivos de script temporales
+*.sh.tmp
+*.py.tmp
+
+# Archivos de configuración local
+config.local.*
+settings.local.*
+
+# Archivos de profiling
+*.prof
+*.pstats
+
+# Archivos de pickle temporales
+*.pickle.tmp
 

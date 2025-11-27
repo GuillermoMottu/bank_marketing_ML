@@ -9,10 +9,12 @@ Este proyecto implementa un modelo de Machine Learning para predecir si un clien
 - **Preprocesamiento completo** con Pipeline y ColumnTransformer
 - **Modelo DecisionTreeClassifier** optimizado con GridSearchCV
 - **API REST** con FastAPI para predicciones y métricas
-- **Base de datos PostgreSQL** para almacenar histórico de métricas
+- **Base de datos PostgreSQL** para almacenar histórico de métricas y predicciones
 - **Dashboard interactivo** con Dash y Plotly para monitoreo
 - **Prueba de hipótesis estadística** con prueba binomial exacta
 - **Dockerización completa** para despliegue fácil
+- **Guardado automático** de todas las predicciones en la base de datos
+- **Manejo robusto de errores** con mensajes claros y códigos HTTP apropiados
 
 ## 🏗️ Estructura del Proyecto
 
@@ -82,6 +84,12 @@ Esto creará:
 - `models/preprocessing_pipeline.pkl`
 - `models/decision_tree_model.pkl`
 
+**⚠️ Nota importante**: Si planeas usar Docker, es recomendable entrenar el modelo dentro del contenedor para asegurar compatibilidad de versiones:
+```bash
+docker-compose up -d api
+docker exec bank_marketing_api python train_model.py
+```
+
 ## 🐳 Ejecución con Docker (Recomendado)
 
 El método más simple para ejecutar todo el sistema es usando Docker Compose:
@@ -105,7 +113,7 @@ Esto iniciará automáticamente:
 
 ### POST `/api/v1/predict`
 
-Realiza una predicción para un cliente.
+Realiza una predicción para un cliente. **Cada predicción se guarda automáticamente en la base de datos**.
 
 **Request Body**:
 ```json
@@ -137,6 +145,8 @@ Realiza una predicción para un cliente.
   "class_name": "yes"
 }
 ```
+
+**Nota**: Cada predicción se guarda automáticamente en la tabla `prediction_history` con los datos de entrada, resultado y timestamp.
 
 ### GET `/api/v1/metrics`
 
@@ -190,8 +200,15 @@ El dashboard proporciona una interfaz web completa para:
 - **Formulario interactivo**: Para ingresar características del cliente
 - **Predicción en tiempo real**: Muestra probabilidad y clase predicha
 - **Validación de entrada**: Asegura datos correctos antes de predecir
+- **Guardado automático**: Cada predicción se guarda automáticamente en la base de datos
 
-El dashboard se actualiza automáticamente cada 30 segundos.
+El dashboard se actualiza automáticamente cada 30 segundos y maneja correctamente las operaciones concurrentes de base de datos.
+
+**Consejos para mejores resultados:**
+- Usar `default="no"` y `loan="no"` aumenta significativamente las probabilidades
+- Contactos por `cellular` tienen mejor tasa de éxito
+- Duración alta (>400 segundos) indica mayor interés
+- Si hay historial previo, `poutcome="success"` es muy positivo
 
 ## 📈 Prueba de Hipótesis Estadística
 
@@ -293,7 +310,11 @@ print(f"Predicción: {prediction}, Probabilidad: {probability}")
 
 ## 🗄️ Base de Datos
 
-La base de datos PostgreSQL almacena automáticamente cada cálculo de métricas en la tabla `metrics_history`:
+La base de datos PostgreSQL utiliza SQLAlchemy async y almacena automáticamente:
+
+### Tabla `metrics_history`
+
+Almacena el histórico de métricas del modelo:
 
 ```sql
 CREATE TABLE metrics_history (
@@ -304,7 +325,75 @@ CREATE TABLE metrics_history (
 );
 ```
 
-Cada vez que se llama al endpoint `/metrics`, se crea un nuevo registro.
+**Características:**
+- Cada vez que se llama al endpoint `/metrics`, se crea un nuevo registro
+- Almacena métricas completas: accuracy, precision, recall, F1-score, AUC-ROC, matriz de confusión, curvas ROC y Precision-Recall
+- Permite seguimiento histórico del rendimiento del modelo
+
+### Tabla `prediction_history`
+
+Almacena el histórico de todas las predicciones realizadas:
+
+```sql
+CREATE TABLE prediction_history (
+    id SERIAL PRIMARY KEY,
+    input_data JSONB NOT NULL,
+    prediction INTEGER NOT NULL,
+    probability VARCHAR(20) NOT NULL,
+    class_name VARCHAR(10) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Características:**
+- Guardado automático de cada predicción realizada
+- Incluye datos de entrada completos del cliente en formato JSON
+- Permite auditoría y análisis posterior del comportamiento del modelo
+- Facilita el seguimiento de predicciones exitosas vs. fallidas
+
+**Pool de conexiones:**
+- Configurado para manejar múltiples operaciones concurrentes
+- `pool_pre_ping=True` para verificar conexiones vivas
+- Reciclaje automático de conexiones
+
+### Consultar Historial
+
+Para consultar el historial de predicciones desde Python:
+
+```python
+import asyncio
+from src.database.connection import AsyncSessionLocal
+from src.database.crud import get_all_predictions
+
+async def consultar_predicciones():
+    async with AsyncSessionLocal() as session:
+        predicciones = await get_all_predictions(session, limit=100)
+        for pred in predicciones[:10]:
+            print(f"ID: {pred.id}, Predicción: {pred.class_name}, "
+                  f"Probabilidad: {pred.probability}, Fecha: {pred.created_at}")
+
+asyncio.run(consultar_predicciones())
+```
+
+O directamente desde PostgreSQL:
+
+```sql
+-- Ver últimas 10 predicciones
+SELECT id, prediction, probability, class_name, created_at 
+FROM prediction_history 
+ORDER BY created_at DESC 
+LIMIT 10;
+
+-- Contar predicciones por clase
+SELECT class_name, COUNT(*) 
+FROM prediction_history 
+GROUP BY class_name;
+
+-- Ver predicciones con alta probabilidad
+SELECT * FROM prediction_history 
+WHERE probability::float > 0.8 
+ORDER BY created_at DESC;
+```
 
 ## 🔍 Preprocesamiento
 
@@ -333,20 +422,63 @@ Con validación cruzada de **10 folds** y scoring **ROC-AUC**.
 - **División estratificada**: Para mantener proporciones de clases en train/test
 - **Validación cruzada**: 10 folds para GridSearchCV
 - **Scoring**: ROC-AUC (mejor para datasets potencialmente desbalanceados)
+- **Manejo de errores**: Sistema robusto con códigos HTTP apropiados (500 para errores internos, 503 para servicio no disponible)
+- **Operaciones asíncronas**: Base de datos con SQLAlchemy async para mejor rendimiento
+- **Isolación de event loops**: Dashboard con manejo correcto de operaciones asíncronas en contexto síncrono
 
 ## 🐛 Troubleshooting
 
 ### El modelo no se encuentra
 
-Asegúrate de ejecutar `python train_model.py` antes de usar la API o el dashboard.
+**Opción 1 - Entrenar localmente:**
+```bash
+python train_model.py
+```
+
+**Opción 2 - Entrenar dentro del contenedor Docker (recomendado):**
+```bash
+docker exec bank_marketing_api python train_model.py
+```
+
+Esto asegura que el modelo se entrene con la misma versión de scikit-learn que usa la API.
+
+### Error 503 Service Unavailable en predicciones
+
+Este error indica que el modelo no está disponible. Verifica:
+1. Que el modelo existe en `models/decision_tree_model.pkl`
+2. Que el pipeline existe en `models/preprocessing_pipeline.pkl`
+3. Si estás usando Docker, entrena el modelo dentro del contenedor para evitar problemas de versiones
 
 ### Error de conexión a la base de datos
 
-Verifica que PostgreSQL esté corriendo y que las variables de entorno estén correctamente configuradas.
+Verifica que PostgreSQL esté corriendo y que las variables de entorno estén correctamente configuradas:
+
+```bash
+docker ps  # Verificar que el contenedor de la BD esté corriendo
+docker logs bank_marketing_db  # Ver logs de la base de datos
+```
 
 ### Dashboard no muestra datos
 
-Asegúrate de haber llamado al menos una vez al endpoint `/metrics` para generar datos históricos.
+1. Asegúrate de haber llamado al menos una vez al endpoint `/metrics` para generar datos históricos
+2. El dashboard se actualiza automáticamente cada 30 segundos
+3. Si hay errores de concurrencia, los contenedores ya están configurados para manejarlos correctamente
+
+### Error de versiones de scikit-learn
+
+Si entrenaste el modelo localmente y obtienes errores al cargarlo en Docker:
+- Entrena el modelo dentro del contenedor Docker para asegurar compatibilidad de versiones
+- Ejecuta: `docker exec bank_marketing_api python train_model.py`
+
+### Reconstruir imágenes Docker después de cambios en el código
+
+Si has hecho cambios en el código y necesitas reconstruir las imágenes:
+
+```bash
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+```
 
 ## 📄 Licencia
 
@@ -358,5 +490,34 @@ Proyecto desarrollado como parte de un curso académico de Machine Learning y ML
 
 ---
 
+## ✨ Características Adicionales
+
+### Guardado Automático de Predicciones
+
+Todas las predicciones se guardan automáticamente en la base de datos, permitiendo:
+- Auditoría completa de todas las predicciones realizadas
+- Análisis de patrones en las predicciones
+- Seguimiento de la efectividad del modelo en producción
+- Análisis de qué características llevan a predicciones exitosas
+
+### Manejo Robusto de Errores
+
+El sistema incluye manejo avanzado de errores:
+- Verificación de disponibilidad del modelo antes de predecir
+- Mensajes de error claros y descriptivos
+- Códigos HTTP apropiados (503 para servicio no disponible)
+- Logging detallado para debugging
+
+### Compatibilidad de Versiones
+
+El sistema detecta y previene problemas de compatibilidad:
+- Verificación de versiones de scikit-learn
+- Recomendación de entrenar el modelo dentro del contenedor Docker
+- Mensajes claros cuando el modelo no está disponible
+
+---
+
 **¡El proyecto está listo para ejecutarse con `docker compose up --build`!** 🚀
+
+**Nota**: Asegúrate de entrenar el modelo dentro del contenedor Docker para evitar problemas de compatibilidad de versiones.
 

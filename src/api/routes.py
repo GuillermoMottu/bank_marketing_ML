@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.dependencies import ModelService, get_model_service
 from src.api.models import MetricsOutput, PredictionInput, PredictionOutput
-from src.database.crud import create_metrics_record
+from src.database.crud import create_metrics_record, create_prediction_record
 from src.database.connection import get_session
 from src.model.evaluator import calculate_metrics
 from src.preprocessing.pipeline import load_data, load_preprocessing_pipeline, transform_data
@@ -23,7 +23,8 @@ router = APIRouter()
 @router.post("/predict", response_model=PredictionOutput)
 async def predict(
     input_data: PredictionInput,
-    model_service: ModelService = Depends(get_model_service)
+    model_service: ModelService = Depends(get_model_service),
+    db: AsyncSession = Depends(get_session)
 ) -> PredictionOutput:
     """Realiza una predicción de si un cliente suscribirá un depósito.
     
@@ -37,6 +38,16 @@ async def predict(
     try:
         logger.info(f"Recibida solicitud de predicción para cliente: {input_data.age} años")
         
+        # Verificar si el modelo está disponible
+        if not model_service.is_loaded:
+            error_detail = (
+                "El modelo no está disponible. "
+                f"{model_service.load_error if model_service.load_error else 'El modelo no ha sido cargado correctamente.'} "
+                "Por favor, entrena el modelo ejecutando: python train_model.py"
+            )
+            logger.error(error_detail)
+            raise HTTPException(status_code=503, detail=error_detail)
+        
         # Convertir Pydantic model a dict
         input_dict = input_data.model_dump()
         
@@ -47,12 +58,33 @@ async def predict(
         
         logger.info(f"Predicción: {class_name} (probabilidad: {probability:.4f})")
         
+        # Guardar predicción en base de datos
+        try:
+            await create_prediction_record(
+                db=db,
+                input_data=input_dict,
+                prediction=prediction,
+                probability=probability,
+                class_name=class_name
+            )
+            logger.info("Predicción guardada en base de datos")
+        except Exception as e:
+            logger.warning(f"No se pudo guardar la predicción en BD: {e}")
+            # Continuar aunque falle el guardado
+        
         return PredictionOutput(
             prediction=prediction,
             probability=probability,
             class_name=class_name
         )
     
+    except HTTPException:
+        # Re-lanzar HTTPException sin modificar
+        raise
+    except RuntimeError as e:
+        # Error relacionado con el modelo no disponible
+        logger.error(f"Error en predicción (modelo no disponible): {str(e)}", exc_info=True)
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error(f"Error en predicción: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error en la predicción: {str(e)}")
@@ -78,8 +110,22 @@ async def get_metrics(
     try:
         logger.info("Calculando métricas del modelo...")
         
+        # Verificar si el modelo está disponible
+        if not model_service.is_loaded:
+            error_detail = (
+                "El modelo no está disponible. "
+                f"{model_service.load_error if model_service.load_error else 'El modelo no ha sido cargado correctamente.'} "
+                "Por favor, entrena el modelo ejecutando: python train_model.py"
+            )
+            logger.error(error_detail)
+            raise HTTPException(status_code=503, detail=error_detail)
+        
         if model_service.model is None or model_service.preprocessor is None:
-            raise HTTPException(status_code=500, detail="Modelo o preprocesador no cargados")
+            error_detail = (
+                "El modelo o preprocesador no están disponibles. "
+                "Por favor, entrena el modelo ejecutando: python train_model.py"
+            )
+            raise HTTPException(status_code=503, detail=error_detail)
         
         # Cargar datos de test (necesitamos guardar X_test e y_test)
         # Por ahora, cargamos todo el dataset y recreamos la división

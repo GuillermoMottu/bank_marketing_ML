@@ -31,6 +31,12 @@ class UnknownValueHandler(BaseEstimator, TransformerMixin):
         Returns:
             self
         """
+        # Guardar nombres de características para get_feature_names_out
+        if hasattr(X, 'columns'):
+            self.feature_names_in_ = np.array(X.columns)
+        else:
+            # Si X es un array numpy, generar nombres genéricos
+            self.feature_names_in_ = np.array([f'feature_{i}' for i in range(X.shape[1])])
         return self
     
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -52,4 +58,28 @@ class UnknownValueHandler(BaseEstimator, TransformerMixin):
                         f'unknown_{col}'
                     )
         return X
+    
+    def get_feature_names_out(self, input_features=None) -> np.ndarray:
+        """Devuelve los nombres de las características de salida.
+        
+        Args:
+            input_features: Nombres de las características de entrada. 
+                          Si es None y X fue un DataFrame, usa las columnas.
+        
+        Returns:
+            Array con los nombres de las características (iguales a las de entrada).
+        """
+        if input_features is None:
+            # Si no se proporcionan, intentar obtenerlos de fit/transform anteriores
+            if hasattr(self, 'feature_names_in_'):
+                return self.feature_names_in_
+            raise ValueError(
+                "No se pueden determinar los nombres de características. "
+                "Proporcione input_features o ajuste el transformador primero."
+            )
+        
+        # Convertir a array numpy
+        if isinstance(input_features, (list, tuple)):
+            return np.array(input_features)
+        return input_features
 
