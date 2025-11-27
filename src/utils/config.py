@@ -26,10 +26,11 @@ DB_PASSWORD: str = os.getenv("DB_PASSWORD", "postgres")
 
 # Railway y otras plataformas pueden proporcionar DATABASE_URL directamente
 # Si está disponible, usarla; si no, construirla desde variables individuales
-if os.getenv("DATABASE_URL"):
+database_url_env = os.getenv("DATABASE_URL")
+if database_url_env:
     # Si DATABASE_URL está disponible, usarla directamente
     # Asegurar que use asyncpg si no lo especifica
-    db_url = os.getenv("DATABASE_URL")
+    db_url = database_url_env
     if db_url.startswith("postgresql://"):
         # Convertir postgresql:// a postgresql+asyncpg://
         DATABASE_URL = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
@@ -45,6 +46,9 @@ else:
     DATABASE_URL: str = (
         f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
+
+# Logging de configuración (sin mostrar credenciales completas)
+# Nota: El logging se hace en src/database/connection.py para evitar imports circulares
 
 # Configuración de API
 API_HOST: str = os.getenv("API_HOST", "0.0.0.0")

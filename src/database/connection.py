@@ -36,16 +36,49 @@ async def init_db() -> None:
     
     Esta función debe ser llamada al iniciar la aplicación.
     """
+    import os
+    from src.utils.config import DB_HOST, DB_PORT
+    
     logger.info("Inicializando base de datos...")
     
-    async with engine.begin() as conn:
-        # Importar modelos aquí para evitar imports circulares
-        from src.database.models import MetricsHistory, PredictionHistory
-        
-        # Crear todas las tablas
-        await conn.run_sync(Base.metadata.create_all)
+    # Mostrar información de configuración (sin credenciales)
+    if os.getenv("DATABASE_URL"):
+        logger.info("Usando DATABASE_URL desde variable de entorno")
+        # Mostrar solo el hostname (parte después de @)
+        if "@" in DATABASE_URL:
+            host_part = DATABASE_URL.split("@")[1].split("/")[0]
+            logger.info(f"Host de base de datos: {host_part}")
+    else:
+        logger.info(f"Construyendo DATABASE_URL desde variables individuales")
+        logger.info(f"Host: {DB_HOST}, Puerto: {DB_PORT}")
     
-    logger.info("Base de datos inicializada correctamente")
+    try:
+        async with engine.begin() as conn:
+            # Importar modelos aquí para evitar imports circulares
+            from src.database.models import MetricsHistory, PredictionHistory
+            
+            # Crear todas las tablas
+            await conn.run_sync(Base.metadata.create_all)
+        
+        logger.info("Base de datos inicializada correctamente")
+    except Exception as e:
+        logger.error(f"Error al inicializar base de datos: {e}")
+        logger.error(f"Tipo de error: {type(e).__name__}")
+        
+        # Mostrar información útil para debugging
+        if "@" in DATABASE_URL:
+            host_part = DATABASE_URL.split("@")[1].split("/")[0] if "@" in DATABASE_URL else "N/A"
+            logger.error(f"Intentando conectar a: {host_part}")
+        else:
+            logger.error(f"Host configurado: {DB_HOST}, Puerto: {DB_PORT}")
+        
+        logger.error("Verifica que:")
+        logger.error("  1. El servicio PostgreSQL está activo en Railway")
+        logger.error("  2. Las variables de entorno están configuradas correctamente")
+        logger.error("  3. DATABASE_URL o variables individuales (DB_HOST, etc.) están definidas")
+        
+        # Re-lanzar la excepción para que el caller pueda manejarla
+        raise
 
 
 async def close_db() -> None:
