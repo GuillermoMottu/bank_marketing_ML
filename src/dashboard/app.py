@@ -1,7 +1,6 @@
 """Aplicación principal del Dashboard Dash."""
 
 import json
-import threading
 from datetime import datetime
 from typing import Dict, List
 
@@ -14,52 +13,16 @@ import plotly.graph_objects as go
 from dash import dcc, html, Input, Output, State
 from dash.exceptions import PreventUpdate
 
-import httpx
-
 from src.dashboard.components import create_input_field, create_metric_card
 from src.database.connection import AsyncSessionLocal
 from src.database.crud import get_all_metrics, get_latest_metrics
 from src.utils.config import API_HOST, API_PORT
 from src.utils.logging_config import logger
 
-# URL base de la API - Configurable mediante variable de entorno
-# Para Railway/producción: usar API_BASE_URL con URL completa (ej: https://api.up.railway.app/api/v1)
-# Para Docker local: usar http://api:8000/api/v1
-# Para desarrollo local: usar http://localhost:8000/api/v1
-import os
+import httpx
 
-def get_api_base_url() -> str:
-    """Obtiene la URL base de la API desde variables de entorno."""
-    # Si API_BASE_URL está definida directamente, usarla
-    api_base_url = os.getenv("API_BASE_URL")
-    if api_base_url:
-        # Asegurar que termine con /api/v1 si no lo tiene
-        if not api_base_url.endswith("/api/v1"):
-            api_base_url = api_base_url.rstrip("/") + "/api/v1"
-        return api_base_url
-    
-    # Si no, construir desde API_HOST y API_PORT
-    api_host = os.getenv("API_HOST", API_HOST)
-    api_port = os.getenv("API_PORT", str(API_PORT))
-    
-    # Si API_HOST parece una URL completa (contiene http:// o https://), usarla directamente
-    if api_host.startswith(("http://", "https://")):
-        base = api_host.rstrip("/")
-        return f"{base}/api/v1"
-    
-    # Determinar protocolo: HTTPS si el puerto es 443 o si API_HOST contiene railway.app
-    is_railway = "railway.app" in api_host
-    protocol = "https" if api_port == "443" or is_railway else "http"
-    
-    # Para Railway o puerto 443 (HTTPS estándar), no incluir puerto en la URL
-    # Railway maneja el enrutamiento automáticamente y las URLs públicas siempre usan HTTPS
-    # sin necesidad de especificar el puerto
-    if is_railway or (protocol == "https" and api_port == "443"):
-        return f"{protocol}://{api_host}/api/v1"
-    
-    return f"{protocol}://{api_host}:{api_port}/api/v1"
-
-API_BASE_URL = get_api_base_url()
+# URL base de la API
+API_BASE_URL = f"http://api:8000/api/v1"
 
 # Inicializar la app Dash
 app = dash.Dash(
@@ -264,107 +227,33 @@ def update_tab_content(active_tab: str):
     return html.Div()
 
 
-# Lock para evitar operaciones concurrentes en la base de datos
-_db_lock = threading.Lock()
-
-def fetch_metrics_sync() -> list:
-    """Función helper para obtener métricas de forma síncrona desde el dashboard.
-    
-    Esta función maneja correctamente las operaciones asíncronas en un contexto
-    síncrono, creando un engine completamente nuevo para cada operación en un thread
-    separado con su propio event loop aislado.
-    
-    Returns:
-        Lista de diccionarios con las métricas o lista vacía en caso de error.
-    """
-    import asyncio
-    import concurrent.futures
-    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-    from src.utils.config import DATABASE_URL
-    
-    async def _fetch_metrics() -> list:
-        """Función asíncrona para obtener métricas de la base de datos."""
-        # Crear un engine completamente nuevo para este event loop
-        engine = create_async_engine(
-            DATABASE_URL,
-            echo=False,
-            pool_pre_ping=True,
-            pool_size=1,
-            max_overflow=0
-        )
-        
-        # Crear un sessionmaker nuevo para este engine
-        AsyncSessionLocal = async_sessionmaker(
-            engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
-        )
-        
-        try:
-            async with AsyncSessionLocal() as session:
-                metrics_records = await get_all_metrics(session, limit=100)
-                result = [
-                    {
-                        "id": record.id,
-                        "model_name": record.model_name,
-                        "metrics": record.metrics_json,
-                        "created_at": record.created_at.isoformat()
-                    }
-                    for record in metrics_records
-                ]
-                return result
-        except Exception as e:
-            logger.error(f"Error obteniendo métricas: {e}", exc_info=True)
-            return []
-        finally:
-            # Cerrar el engine completamente antes de salir
-            await engine.dispose()
-    
-    def _run_in_new_loop():
-        """Ejecuta la función asíncrona en un nuevo event loop completamente aislado."""
-        # Crear un nuevo event loop para este thread
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(_fetch_metrics())
-        except Exception as e:
-            logger.error(f"Error en event loop: {e}", exc_info=True)
-            return []
-        finally:
-            # Cerrar todas las tareas pendientes
-            try:
-                pending = asyncio.all_tasks(loop)
-                for task in pending:
-                    task.cancel()
-                if pending:
-                    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-            except Exception:
-                pass
-            finally:
-                loop.close()
-    
-    # Usar lock para evitar operaciones concurrentes y ejecutar en thread separado
-    with _db_lock:
-        try:
-            # Siempre ejecutar en un thread separado para evitar conflictos con event loops
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(_run_in_new_loop)
-                return future.result(timeout=15)
-        except concurrent.futures.TimeoutError:
-            logger.error("Timeout obteniendo métricas")
-            return []
-        except Exception as e:
-            logger.error(f"Error en fetch_metrics_sync: {e}", exc_info=True)
-            return []
-
-
 @app.callback(
     Output("metrics-store", "data"),
     Input("interval-component", "n_intervals")
 )
 def update_metrics_store(n_intervals: int):
     """Actualiza los datos de métricas desde la base de datos."""
-    return fetch_metrics_sync()
+    import asyncio
+    try:
+        async def _fetch():
+            async with AsyncSessionLocal() as session:
+                try:
+                    metrics_records = await get_all_metrics(session, limit=100)
+                    return [
+                        {
+                            "id": record.id,
+                            "model_name": record.model_name,
+                            "metrics": record.metrics_json,
+                            "created_at": record.created_at.isoformat()
+                        }
+                        for record in metrics_records
+                    ]
+                finally:
+                    await session.close()
+        return asyncio.run(_fetch())
+    except Exception as e:
+        logger.error(f"Error obteniendo métricas: {e}")
+        return []
 
 
 @app.callback(
@@ -621,4 +510,3 @@ def make_prediction(n_clicks, *args):
     except Exception as e:
         logger.error(f"Error en predicción: {e}")
         return dbc.Alert(f"Error al realizar la predicción: {str(e)}", color="danger")
-
