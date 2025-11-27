@@ -109,6 +109,25 @@ Esto iniciará automáticamente:
 - **Documentación API**: http://localhost:8000/docs
 - **Dashboard**: http://localhost:8050
 
+## ☁️ Despliegue en AWS
+
+Para desplegar este proyecto en AWS EC2, consulta la [Guía de Despliegue en AWS](docs/AWS_DEPLOYMENT.md).
+
+### Inicio Rápido
+
+1. **Despliegue automatizado** (requiere AWS CLI):
+   ```bash
+   chmod +x scripts/aws/deploy.sh
+   ./scripts/aws/deploy.sh
+   ```
+
+2. **Despliegue manual**:
+   - Crea una instancia EC2 (t3.medium o superior)
+   - Conéctate y ejecuta: `scripts/aws/init_server.sh`
+   - Clona el repositorio y ejecuta: `scripts/aws/setup_production.sh`
+
+3. **Ver documentación completa**: [docs/AWS_DEPLOYMENT.md](docs/AWS_DEPLOYMENT.md)
+
 ## 📡 Endpoints de la API
 
 ### POST `/api/v1/predict`

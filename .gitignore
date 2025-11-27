@@ -142,6 +142,16 @@ docker/README.md
 # Archivos de script temporales
 *.sh.tmp
 *.py.tmp
+*.ps1.tmp
+*_temp*.sh
+*_temp*.ps1
+*_helper*.sh
+*_helper*.ps1
+*.local.sh
+*.local.ps1
+
+# Scripts temporales y utilitarios
+fix_git_credentials.ps1
 
 # Archivos de configuración local
 config.local.*
@@ -153,4 +163,78 @@ settings.local.*
 
 # Archivos de pickle temporales
 *.pickle.tmp
+
+# Credenciales y tokens
+*.token
+*.key
+*.pem
+*.crt
+*.cer
+credentials.json
+secrets.json
+*.secret
+
+# Configuraciones de AWS locales
+.aws/
+aws-cli-credentials
+*.aws-config
+
+# Archivos de configuración local de scripts
+scripts/**/*.local.*
+scripts/**/*local*
+
+# Archivos de backup de scripts
+scripts/**/*.backup
+scripts/**/*.old
+scripts/**/*.bak
+
+# Archivos temporales de notebooks compilados
+*.nbconvert.ipynb
+*.nbconvert.py
+
+# Archivos de Jupyter Notebook outputs (opcional, si no se quieren versionar)
+# *.ipynb
+
+# Archivos de certificados SSL/TLS
+*.p12
+*.pfx
+*.jks
+
+# Archivos de sesión y estado
+*.session
+*.state
+*.lock
+*.pid
+
+# Archivos de cache de herramientas
+.ruff_cache/
+.bandit_cache/
+.flake8_cache/
+*.cache/
+
+# Archivos de métricas y reportes temporales
+*.html
+!docs/**/*.html
+report/
+reports/
+*.report
+
+# Archivos de dump de base de datos (backups locales)
+*.sql.dump
+*.dump
+backups/
+*.backup.sql
+
+# Archivos de configuración de desarrollo local
+.vscode/settings.json
+.vscode/launch.json
+.idea/workspace.xml
+.idea/tasks.xml
+
+# Archivos de variables de entorno de desarrollo
+.env.development
+.env.test
+.env.production.local
+.env.development.local
+.env.test.local
 
