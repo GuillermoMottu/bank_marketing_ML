@@ -1,0 +1,47 @@
+# Archivos y directorios a ignorar en Railway
+# (Similar a .gitignore pero específico para Railway)
+
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Jupyter Notebooks (opcional, mantener si quieres)
+# notebooks/
+
+# Logs locales
+logs/*.log
+*.log
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de configuración local
+.env.local
+.env.*.local
+
+# Docker (no necesario en Railway)
+docker-compose.yml
+docker/
+
+# Scripts de AWS (no necesarios en Railway)
+scripts/aws/
+
+# Documentación (opcional, mantener si quieres)
+# docs/
+

@@ -22,8 +22,44 @@ from src.database.crud import get_all_metrics, get_latest_metrics
 from src.utils.config import API_HOST, API_PORT
 from src.utils.logging_config import logger
 
-# URL base de la API
-API_BASE_URL = f"http://api:8000/api/v1"
+# URL base de la API - Configurable mediante variable de entorno
+# Para Railway/producción: usar API_BASE_URL con URL completa (ej: https://api.up.railway.app/api/v1)
+# Para Docker local: usar http://api:8000/api/v1
+# Para desarrollo local: usar http://localhost:8000/api/v1
+import os
+
+def get_api_base_url() -> str:
+    """Obtiene la URL base de la API desde variables de entorno."""
+    # Si API_BASE_URL está definida directamente, usarla
+    api_base_url = os.getenv("API_BASE_URL")
+    if api_base_url:
+        # Asegurar que termine con /api/v1 si no lo tiene
+        if not api_base_url.endswith("/api/v1"):
+            api_base_url = api_base_url.rstrip("/") + "/api/v1"
+        return api_base_url
+    
+    # Si no, construir desde API_HOST y API_PORT
+    api_host = os.getenv("API_HOST", API_HOST)
+    api_port = os.getenv("API_PORT", str(API_PORT))
+    
+    # Si API_HOST parece una URL completa (contiene http:// o https://), usarla directamente
+    if api_host.startswith(("http://", "https://")):
+        base = api_host.rstrip("/")
+        return f"{base}/api/v1"
+    
+    # Determinar protocolo: HTTPS si el puerto es 443 o si API_HOST contiene railway.app
+    is_railway = "railway.app" in api_host
+    protocol = "https" if api_port == "443" or is_railway else "http"
+    
+    # Para Railway o puerto 443 (HTTPS estándar), no incluir puerto en la URL
+    # Railway maneja el enrutamiento automáticamente y las URLs públicas siempre usan HTTPS
+    # sin necesidad de especificar el puerto
+    if is_railway or (protocol == "https" and api_port == "443"):
+        return f"{protocol}://{api_host}/api/v1"
+    
+    return f"{protocol}://{api_host}:{api_port}/api/v1"
+
+API_BASE_URL = get_api_base_url()
 
 # Inicializar la app Dash
 app = dash.Dash(
