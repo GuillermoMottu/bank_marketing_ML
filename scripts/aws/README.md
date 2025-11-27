@@ -97,3 +97,4 @@ Este script:
 - Algunos scripts requieren ejecutarse con `sudo`
 - Los backups se guardan en `/home/ec2-user/backups` por defecto
 
+

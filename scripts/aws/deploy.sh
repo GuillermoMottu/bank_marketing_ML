@@ -206,3 +206,4 @@ echo "5. Entrena el modelo:"
 echo "   docker exec bank_marketing_api python train_model.py"
 echo ""
 
+

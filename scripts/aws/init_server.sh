@@ -153,3 +153,4 @@ echo "4. Configura el archivo .env"
 echo "5. Ejecuta: docker compose up -d --build"
 echo ""
 
+

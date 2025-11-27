@@ -93,3 +93,4 @@ echo "Para reiniciar servicios:"
 echo "  docker compose restart"
 echo ""
 
+

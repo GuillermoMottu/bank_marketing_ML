@@ -72,3 +72,4 @@ echo "Para ver logs:"
 echo "  docker compose logs -f"
 echo ""
 
+
