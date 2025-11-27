@@ -36,5 +36,6 @@ RUN mkdir -p logs models data/raw data/processed
 EXPOSE 8000
 
 # Comando para ejecutar la API
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Usar run_api.py que maneja $PORT correctamente para Railway
+CMD ["python", "run_api.py"]
 
