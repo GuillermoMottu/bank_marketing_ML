@@ -20,9 +20,14 @@ from src.utils.config import API_HOST, API_PORT
 from src.utils.logging_config import logger
 
 import httpx
+import os
 
-# URL base de la API
-API_BASE_URL = f"http://api:8000/api/v1"
+# URL base de la API - usar variable de entorno si está disponible (Railway)
+# Si no, usar configuración local para desarrollo
+API_BASE_URL = os.getenv(
+    "API_BASE_URL",
+    f"http://{API_HOST}:{API_PORT}/api/v1"
+)
 
 # Inicializar la app Dash
 app = dash.Dash(
