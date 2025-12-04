@@ -16,6 +16,11 @@ RAW_DATA_FILE = "bank.csv"
 MODEL_FILE = "decision_tree_model.pkl"
 PREPROCESSING_PIPELINE_FILE = "preprocessing_pipeline.pkl"
 
+# Archivos de Deep Learning
+DL_MODEL_DNN_FILE = "dnn_model.h5"
+DL_MODEL_CNN_FILE = "cnn_model.h5"
+DL_PREPROCESSING_PIPELINE_FILE = "dl_preprocessing_pipeline.pkl"
+
 # Configuración de base de datos
 # Siempre definir variables individuales (pueden usarse en otros lugares)
 DB_HOST: str = os.getenv("DB_HOST", "db")
@@ -65,4 +70,16 @@ CV_FOLDS: int = 10
 
 # Variable objetivo
 TARGET_COLUMN: str = "deposit"
+
+# Configuración de Deep Learning
+DL_DEFAULT_HIDDEN_LAYERS = [128, 64, 32]
+DL_DEFAULT_CONV_FILTERS = [64, 32]
+DL_DEFAULT_DROPOUT_RATE = 0.3
+DL_DEFAULT_USE_BATCH_NORM = True
+DL_DEFAULT_EPOCHS = 100
+DL_DEFAULT_BATCH_SIZE = 32
+DL_DEFAULT_VALIDATION_SPLIT = 0.2
+DL_DEFAULT_EARLY_STOPPING = True
+DL_DEFAULT_EARLY_STOPPING_PATIENCE = 10
+DL_DEFAULT_SCALER_TYPE = "standard"
 

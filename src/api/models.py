@@ -11,6 +11,8 @@ class PredictionInput(BaseModel):
     Representa todas las características necesarias para hacer una predicción.
     """
     
+    model_config = {"protected_namespaces": ()}
+    
     age: int = Field(..., ge=0, le=120, description="Edad del cliente")
     job: str = Field(..., description="Tipo de trabajo")
     marital: Literal["single", "married", "divorced"] = Field(..., description="Estado civil")
@@ -27,6 +29,8 @@ class PredictionInput(BaseModel):
     pdays: int = Field(..., description="Número de días pasados desde el último contacto")
     previous: int = Field(..., ge=0, description="Número de contactos antes de esta campaña")
     poutcome: str = Field(..., description="Resultado de la campaña de marketing anterior")
+    model_type: Literal["ML", "Deep"] = Field(default="ML", description="Tipo de modelo a usar")
+    architecture: Optional[Literal["DNN", "CNN"]] = Field(default=None, description="Arquitectura para Deep Learning (requerido si model_type='Deep')")
     
     class Config:
         json_schema_extra = {
@@ -57,6 +61,34 @@ class PredictionOutput(BaseModel):
     prediction: int = Field(..., description="Predicción binaria (0=no, 1=yes)")
     probability: float = Field(..., ge=0.0, le=1.0, description="Probabilidad de que sea 'yes'")
     class_name: str = Field(..., description="Nombre de la clase predicha")
+
+
+class TrainingInput(BaseModel):
+    """Modelo de entrada para entrenar un modelo de Deep Learning."""
+    
+    model_config = {"protected_namespaces": ()}
+    
+    architecture: Literal["DNN", "CNN"] = Field(..., description="Arquitectura del modelo (DNN o CNN)")
+    hidden_layers: Optional[list[int]] = Field(default=None, description="Lista de neuronas por capa oculta para DNN")
+    conv_filters: Optional[list[int]] = Field(default=None, description="Lista de filtros por capa convolucional para CNN")
+    dropout_rate: float = Field(default=0.3, ge=0.0, le=1.0, description="Tasa de dropout")
+    use_batch_norm: bool = Field(default=True, description="Usar Batch Normalization")
+    epochs: int = Field(default=100, ge=1, description="Número de épocas")
+    batch_size: int = Field(default=32, ge=1, description="Tamaño del batch")
+    validation_split: float = Field(default=0.2, ge=0.0, le=0.5, description="Proporción de datos para validación")
+    early_stopping: bool = Field(default=True, description="Usar Early Stopping")
+    early_stopping_patience: int = Field(default=10, ge=1, description="Paciencia para Early Stopping")
+    scaler_type: Literal["standard", "minmax"] = Field(default="standard", description="Tipo de escalador")
+    model_name: Optional[str] = Field(default=None, description="Nombre del modelo (opcional)")
+
+
+class TrainingOutput(BaseModel):
+    """Modelo de salida para el entrenamiento."""
+    
+    success: bool = Field(..., description="Si el entrenamiento fue exitoso")
+    message: str = Field(..., description="Mensaje descriptivo")
+    model_name: Optional[str] = Field(default=None, description="Nombre del modelo entrenado")
+    metrics: Optional[dict] = Field(default=None, description="Métricas del modelo entrenado")
 
 
 class MetricsOutput(BaseModel):

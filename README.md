@@ -94,13 +94,22 @@ docker exec bank_marketing_api python train_model.py
 
 El método más simple para ejecutar todo el sistema es usando Docker Compose:
 
+### Despliegue Rápido
+
 ```bash
-docker compose up --build
+# Construir imágenes (primera vez puede tardar 10-20 min por TensorFlow)
+docker-compose build
+
+# Levantar todos los servicios
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
 ```
 
 Esto iniciará automáticamente:
 - **PostgreSQL** en el puerto 5432
-- **API FastAPI** en el puerto 8000
+- **API FastAPI** en el puerto 8000 (con soporte ML y Deep Learning)
 - **Dashboard Dash** en el puerto 8050
 
 ### Acceso a los Servicios
@@ -108,6 +117,21 @@ Esto iniciará automáticamente:
 - **API**: http://localhost:8000
 - **Documentación API**: http://localhost:8000/docs
 - **Dashboard**: http://localhost:8050
+
+### Entrenar Modelos
+
+**Modelo ML (Decision Tree):**
+```bash
+docker exec bank_marketing_api python train_model.py
+```
+
+**Modelo Deep Learning:**
+- Desde el Dashboard: Pestaña "Entrenar DL"
+- O desde la API: `POST /api/v1/train`
+
+### Documentación Completa
+
+Para más detalles sobre despliegue Docker, ver [Guía de Despliegue Docker](docs/DOCKER_DEPLOYMENT.md).
 
 ## ☁️ Despliegue en AWS
 

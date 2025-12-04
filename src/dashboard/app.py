@@ -48,6 +48,7 @@ app.layout = dbc.Container([
     dbc.Tabs([
         dbc.Tab(label="Métricas", tab_id="metrics-tab"),
         dbc.Tab(label="Predicción", tab_id="prediction-tab"),
+        dbc.Tab(label="Entrenar DL", tab_id="training-tab"),
     ], id="tabs", active_tab="metrics-tab"),
     
     html.Div(id="tab-content", className="mt-4"),
@@ -165,6 +166,25 @@ def create_prediction_tab() -> html.Div:
     return html.Div([
         html.H3("Formulario de Predicción", className="mb-3"),
         
+        # Selectores de modelo
+        dbc.Row([
+            dbc.Col([
+                create_input_field("input-model-type", "Tipo de Modelo", "select", options=[
+                    {"label": "Machine Learning (ML)", "value": "ML"},
+                    {"label": "Deep Learning (Deep)", "value": "Deep"},
+                ], value="ML"),
+            ], md=6),
+            dbc.Col([
+                # Siempre crear el componente para que exista en el DOM
+                html.Div([
+                    create_input_field("input-architecture", "Arquitectura", "select", options=[
+                        {"label": "DNN (Red Neuronal Densa)", "value": "DNN"},
+                        {"label": "CNN (Convolucional Tabular)", "value": "CNN"},
+                    ], value="DNN")
+                ], id="architecture-selector"),
+            ], md=6),
+        ], className="mb-3"),
+        
         dbc.Row([
             dbc.Col([
                 create_input_field("input-age", "Edad", "number", value=30, min=0, max=120),
@@ -214,6 +234,51 @@ def create_prediction_tab() -> html.Div:
     ])
 
 
+def create_training_tab() -> html.Div:
+    """Crea el contenido de la pestaña de entrenamiento."""
+    
+    return html.Div([
+        html.H3("Entrenar Modelo de Deep Learning", className="mb-3"),
+        html.P("Configura los parámetros y entrena un modelo de Deep Learning (DNN o CNN).", className="mb-4"),
+        
+        dbc.Row([
+            dbc.Col([
+                create_input_field("train-architecture", "Arquitectura", "select", options=[
+                    {"label": "DNN (Red Neuronal Densa)", "value": "DNN"},
+                    {"label": "CNN (Convolucional Tabular)", "value": "CNN"},
+                ], value="DNN"),
+                create_input_field("train-epochs", "Épocas", "number", value=100, min=1),
+                create_input_field("train-batch-size", "Batch Size", "number", value=32, min=1),
+                create_input_field("train-dropout", "Dropout Rate", "number", value=0.3, min=0.0, max=1.0, step=0.1),
+            ], md=6),
+            dbc.Col([
+                create_input_field("train-scaler", "Tipo de Escalador", "select", options=[
+                    {"label": "Standard Scaler", "value": "standard"},
+                    {"label": "MinMax Scaler", "value": "minmax"},
+                ], value="standard"),
+                create_input_field("train-validation-split", "Validation Split", "number", value=0.2, min=0.0, max=0.5, step=0.1),
+                create_input_field("train-early-stopping-patience", "Early Stopping Patience", "number", value=10, min=1),
+                dbc.Checklist(
+                    options=[{"label": "Usar Batch Normalization", "value": "use_batch_norm"}],
+                    value=["use_batch_norm"],
+                    id="train-batch-norm",
+                    className="mt-4"
+                ),
+            ], md=6),
+        ], className="mb-3"),
+        
+        dbc.Button(
+            "Entrenar Modelo",
+            id="train-button",
+            color="success",
+            size="lg",
+            className="mb-3"
+        ),
+        
+        html.Div(id="training-result"),
+    ])
+
+
 @app.callback(
     Output("tab-content", "children"),
     Input("tabs", "active_tab")
@@ -224,7 +289,21 @@ def update_tab_content(active_tab: str):
         return create_metrics_tab()
     elif active_tab == "prediction-tab":
         return create_prediction_tab()
+    elif active_tab == "training-tab":
+        return create_training_tab()
     return html.Div()
+
+
+@app.callback(
+    Output("architecture-selector", "style"),
+    Input("input-model-type", "value")
+)
+def update_architecture_selector(model_type: str):
+    """Muestra u oculta el selector de arquitectura según el tipo de modelo."""
+    if model_type == "Deep":
+        return {"display": "block"}
+    else:
+        return {"display": "none"}
 
 
 @app.callback(
@@ -446,6 +525,8 @@ def update_metrics_table(metrics_data: List[Dict]):
 @app.callback(
     Output("prediction-result", "children"),
     Input("predict-button", "n_clicks"),
+    State("input-model-type", "value"),
+    State("input-architecture", "value"),
     State("input-age", "value"),
     State("input-job", "value"),
     State("input-marital", "value"),
@@ -463,10 +544,14 @@ def update_metrics_table(metrics_data: List[Dict]):
     State("input-previous", "value"),
     State("input-poutcome", "value"),
 )
-def make_prediction(n_clicks, *args):
+def make_prediction(n_clicks, model_type, architecture, *args):
     """Realiza una predicción usando la API."""
     if n_clicks is None:
         raise PreventUpdate
+    
+    # Validar que si es Deep Learning, se especifique la arquitectura
+    if model_type == "Deep" and architecture is None:
+        return dbc.Alert("Por favor selecciona una arquitectura para Deep Learning.", color="warning")
     
     # Construir payload
     input_data = {
@@ -486,6 +571,8 @@ def make_prediction(n_clicks, *args):
         "pdays": args[13],
         "previous": args[14],
         "poutcome": args[15],
+        "model_type": model_type or "ML",
+        "architecture": architecture if model_type == "Deep" else None,
     }
     
     try:
@@ -510,3 +597,74 @@ def make_prediction(n_clicks, *args):
     except Exception as e:
         logger.error(f"Error en predicción: {e}")
         return dbc.Alert(f"Error al realizar la predicción: {str(e)}", color="danger")
+
+
+@app.callback(
+    Output("training-result", "children"),
+    Input("train-button", "n_clicks"),
+    State("train-architecture", "value"),
+    State("train-epochs", "value"),
+    State("train-batch-size", "value"),
+    State("train-dropout", "value"),
+    State("train-scaler", "value"),
+    State("train-validation-split", "value"),
+    State("train-early-stopping-patience", "value"),
+    State("train-batch-norm", "value"),
+)
+def train_model(n_clicks, architecture, epochs, batch_size, dropout, scaler, validation_split, patience, batch_norm):
+    """Entrena un modelo de Deep Learning usando la API."""
+    if n_clicks is None:
+        raise PreventUpdate
+    
+    # Construir payload
+    training_data = {
+        "architecture": architecture,
+        "epochs": epochs or 100,
+        "batch_size": batch_size or 32,
+        "dropout_rate": dropout or 0.3,
+        "scaler_type": scaler or "standard",
+        "validation_split": validation_split or 0.2,
+        "early_stopping_patience": patience or 10,
+        "use_batch_norm": "use_batch_norm" in (batch_norm or []),
+        "early_stopping": True,
+    }
+    
+    try:
+        with httpx.Client(timeout=300.0) as client:  # Timeout largo para entrenamiento
+            response = client.post(
+                f"{API_BASE_URL}/train",
+                json=training_data,
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            if result.get("success"):
+                metrics_info = ""
+                if result.get("metrics"):
+                    metrics = result["metrics"]
+                    metrics_info = html.Div([
+                        html.H5("Métricas del Modelo Entrenado:", className="mt-3"),
+                        html.P(f"Accuracy: {metrics.get('accuracy', 0):.4f}"),
+                        html.P(f"Precision: {metrics.get('precision', 0):.4f}"),
+                        html.P(f"Recall: {metrics.get('recall', 0):.4f}"),
+                        html.P(f"F1-Score: {metrics.get('f1_score', 0):.4f}"),
+                        html.P(f"AUC-ROC: {metrics.get('auc_roc', 0):.4f}"),
+                    ])
+                
+                return dbc.Alert([
+                    html.H4("Entrenamiento Completado Exitosamente"),
+                    html.P(result.get("message", "")),
+                    html.P(f"Modelo: {result.get('model_name', 'N/A')}"),
+                    metrics_info,
+                ], color="success", className="mt-3")
+            else:
+                return dbc.Alert([
+                    html.H4("Error en el Entrenamiento"),
+                    html.P(result.get("message", "Error desconocido")),
+                ], color="danger", className="mt-3")
+    
+    except httpx.TimeoutException:
+        return dbc.Alert("El entrenamiento está tomando más tiempo del esperado. Por favor verifica los logs del servidor.", color="warning")
+    except Exception as e:
+        logger.error(f"Error en entrenamiento: {e}")
+        return dbc.Alert(f"Error al entrenar el modelo: {str(e)}", color="danger")

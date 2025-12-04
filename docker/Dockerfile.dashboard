@@ -1,18 +1,24 @@
 # Dockerfile para el Dashboard Dash
+# Nota: El dashboard no necesita TensorFlow, solo consume la API
 
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Instalar dependencias del sistema
+# Instalar dependencias del sistema mínimas
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements y instalar dependencias
+# Excluir TensorFlow del dashboard para reducir tamaño de imagen
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Crear requirements sin TensorFlow para el dashboard
+RUN grep -v "^tensorflow" requirements.txt > requirements_dashboard.txt && \
+    pip install --no-cache-dir -r requirements_dashboard.txt && \
+    pip install --no-cache-dir requests && \
+    rm requirements_dashboard.txt
 
 # Copiar código de la aplicación
 COPY . .

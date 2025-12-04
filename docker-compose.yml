@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Base de datos PostgreSQL
   db:
@@ -35,6 +33,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       API_HOST: 0.0.0.0
       API_PORT: 8000
+      # Variables de entorno para TensorFlow
+      TF_CPP_MIN_LOG_LEVEL: 2
     ports:
       - "8000:8000"
     volumes:
@@ -47,6 +47,19 @@ services:
     networks:
       - bank_marketing_network
     restart: unless-stopped
+    # Aumentar límites de memoria para entrenamiento DL
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/v1/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Dashboard Dash
   dashboard:
@@ -70,11 +83,19 @@ services:
       - ./models:/app/models
       - ./data:/app/data
     depends_on:
-      - db
-      - api
+      db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
     networks:
       - bank_marketing_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8050', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
 volumes:
   postgres_data:
