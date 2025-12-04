@@ -11,29 +11,9 @@ class PredictionInput(BaseModel):
     Representa todas las características necesarias para hacer una predicción.
     """
     
-    model_config = {"protected_namespaces": ()}
-    
-    age: int = Field(..., ge=0, le=120, description="Edad del cliente")
-    job: str = Field(..., description="Tipo de trabajo")
-    marital: Literal["single", "married", "divorced"] = Field(..., description="Estado civil")
-    education: str = Field(..., description="Nivel educativo")
-    default: Literal["yes", "no"] = Field(..., description="Tiene crédito en default?")
-    balance: float = Field(..., description="Balance promedio anual")
-    housing: Literal["yes", "no"] = Field(..., description="Tiene préstamo hipotecario?")
-    loan: Literal["yes", "no"] = Field(..., description="Tiene préstamo personal?")
-    contact: str = Field(..., description="Tipo de contacto de comunicación")
-    day: int = Field(..., ge=1, le=31, description="Día del último contacto")
-    month: str = Field(..., description="Mes del último contacto")
-    duration: int = Field(..., ge=0, description="Duración del último contacto en segundos")
-    campaign: int = Field(..., ge=1, description="Número de contactos durante esta campaña")
-    pdays: int = Field(..., description="Número de días pasados desde el último contacto")
-    previous: int = Field(..., ge=0, description="Número de contactos antes de esta campaña")
-    poutcome: str = Field(..., description="Resultado de la campaña de marketing anterior")
-    model_type: Literal["ML", "Deep"] = Field(default="ML", description="Tipo de modelo a usar")
-    architecture: Optional[Literal["DNN", "CNN"]] = Field(default=None, description="Arquitectura para Deep Learning (requerido si model_type='Deep')")
-    
-    class Config:
-        json_schema_extra = {
+    model_config = {
+        "protected_namespaces": (),
+        "json_schema_extra": {
             "example": {
                 "age": 59,
                 "job": "admin.",
@@ -53,6 +33,26 @@ class PredictionInput(BaseModel):
                 "poutcome": "unknown"
             }
         }
+    }
+    
+    age: int = Field(..., ge=0, le=120, description="Edad del cliente")
+    job: str = Field(..., description="Tipo de trabajo")
+    marital: Literal["single", "married", "divorced"] = Field(..., description="Estado civil")
+    education: str = Field(..., description="Nivel educativo")
+    default: Literal["yes", "no"] = Field(..., description="Tiene crédito en default?")
+    balance: float = Field(..., description="Balance promedio anual")
+    housing: Literal["yes", "no"] = Field(..., description="Tiene préstamo hipotecario?")
+    loan: Literal["yes", "no"] = Field(..., description="Tiene préstamo personal?")
+    contact: str = Field(..., description="Tipo de contacto de comunicación")
+    day: int = Field(..., ge=1, le=31, description="Día del último contacto")
+    month: str = Field(..., description="Mes del último contacto")
+    duration: int = Field(..., ge=0, description="Duración del último contacto en segundos")
+    campaign: int = Field(..., ge=1, description="Número de contactos durante esta campaña")
+    pdays: int = Field(..., description="Número de días pasados desde el último contacto")
+    previous: int = Field(..., ge=0, description="Número de contactos antes de esta campaña")
+    poutcome: str = Field(..., description="Resultado de la campaña de marketing anterior")
+    model_type: Literal["ML", "Deep"] = Field(default="ML", description="Tipo de modelo a usar")
+    architecture: Optional[Literal["DNN", "CNN"]] = Field(default=None, description="Arquitectura para Deep Learning (requerido si model_type='Deep')")
 
 
 class PredictionOutput(BaseModel):
