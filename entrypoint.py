@@ -13,8 +13,8 @@ def main():
     
     if service_type == "dashboard":
         print("🚀 Iniciando Dashboard Dash...")
-        # Ejecutar dashboard
-        from run_dashboard import app
+        # Ejecutar dashboard - usar el mismo código que run_dashboard.py
+        from src.dashboard.app import app
         from src.utils.config import DASHBOARD_HOST, DASHBOARD_PORT
         
         port = int(os.getenv("PORT", DASHBOARD_PORT))
