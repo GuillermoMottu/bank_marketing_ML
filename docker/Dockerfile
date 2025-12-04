@@ -55,7 +55,8 @@ RUN mkdir -p logs models data/raw data/processed
 # Exponer puerto
 EXPOSE 8000
 
-# Comando para ejecutar la API
-# Usar run_api.py que maneja $PORT correctamente para Railway
-CMD ["python", "run_api.py"]
+# Script de entrada que detecta qué servicio ejecutar
+# Basado en la variable de entorno SERVICE_TYPE
+# Por defecto ejecuta la API si SERVICE_TYPE no está definido
+CMD ["python", "entrypoint.py"]
 
