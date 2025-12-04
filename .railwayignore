@@ -37,7 +37,7 @@ Thumbs.db
 
 # Docker (no necesario en Railway)
 docker-compose.yml
-docker/
+# docker/  # Comentado: Railway necesita los Dockerfiles para el build
 
 # Scripts de AWS (no necesarios en Railway)
 scripts/aws/
