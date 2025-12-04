@@ -49,18 +49,19 @@ venv.bak/
 .ipython/
 
 # Modelos entrenados y artefactos
-models/*.pkl
-models/*.joblib
-models/*.h5
-models/*.hdf5
+# NOTA: Comentado temporalmente para permitir modelos en Railway deployment
+# models/*.pkl
+# models/*.joblib
+# models/*.h5
+# models/*.hdf5
 models/*.pb
 models/*.onnx
 models/*.pt
 models/*.pth
-*.pkl
-*.joblib
-*.h5
-*.hdf5
+# *.pkl
+# *.joblib
+# *.h5
+# *.hdf5
 
 # Datos procesados y temporales
 data/processed/*

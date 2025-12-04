@@ -133,6 +133,42 @@ docker exec bank_marketing_api python train_model.py
 
 Para más detalles sobre despliegue Docker, ver [Guía de Despliegue Docker](docs/DOCKER_DEPLOYMENT.md).
 
+## ☁️ Despliegue en Railway
+
+Para desplegar este proyecto en Railway, tienes dos opciones:
+
+### Opción 1: Railway CLI (Recomendado para automatización)
+
+1. **Instalar Railway CLI**:
+   ```bash
+   npm i -g @railway/cli
+   ```
+
+2. **Autenticarse**:
+   ```bash
+   railway login
+   ```
+
+3. **Desplegar con script automatizado**:
+   ```bash
+   # Linux/macOS
+   ./railway-cli-deploy.sh all
+   
+   # Windows (PowerShell)
+   .\railway-cli-deploy.ps1 all
+   ```
+
+4. **Ver documentación completa**: [docs/RAILWAY_CLI_DEPLOYMENT.md](docs/RAILWAY_CLI_DEPLOYMENT.md)
+
+### Opción 2: Dashboard Web de Railway
+
+1. **Crear proyecto** en [railway.app](https://railway.app)
+2. **Conectar repositorio** desde GitHub
+3. **Agregar servicios**: PostgreSQL, API y Dashboard
+4. **Configurar variables de entorno**
+
+5. **Ver documentación completa**: [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md)
+
 ## ☁️ Despliegue en AWS
 
 Para desplegar este proyecto en AWS EC2, consulta la [Guía de Despliegue en AWS](docs/AWS_DEPLOYMENT.md).

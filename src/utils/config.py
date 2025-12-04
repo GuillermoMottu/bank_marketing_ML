@@ -22,12 +22,31 @@ DL_MODEL_CNN_FILE = "cnn_model.h5"
 DL_PREPROCESSING_PIPELINE_FILE = "dl_preprocessing_pipeline.pkl"
 
 # Configuración de base de datos
+# Detectar si estamos en Railway (Railway proporciona RAILWAY_ENVIRONMENT o PORT)
+IS_RAILWAY = (
+    os.getenv("RAILWAY_ENVIRONMENT") is not None 
+    or os.getenv("RAILWAY_PROJECT_ID") is not None
+    or (os.getenv("PORT") is not None and os.getenv("DB_HOST") != "db")
+)
+
 # Siempre definir variables individuales (pueden usarse en otros lugares)
-DB_HOST: str = os.getenv("DB_HOST", "db")
-DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
-DB_NAME: str = os.getenv("DB_NAME", "bank_marketing")
-DB_USER: str = os.getenv("DB_USER", "postgres")
-DB_PASSWORD: str = os.getenv("DB_PASSWORD", "postgres")
+# En Railway, no usar "db" como default - Railway proporciona PGHOST o DATABASE_URL
+# Prioridad: DB_HOST > PGHOST > default según entorno
+if os.getenv("DB_HOST"):
+    DB_HOST: str = os.getenv("DB_HOST")
+elif os.getenv("PGHOST"):
+    DB_HOST: str = os.getenv("PGHOST")
+elif IS_RAILWAY:
+    # En Railway sin configuración, no usar default - causará error claro
+    DB_HOST: str = ""
+else:
+    # En Docker/local, usar "db" como default
+    DB_HOST: str = "db"
+
+DB_PORT: int = int(os.getenv("DB_PORT") or os.getenv("PGPORT", "5432"))
+DB_NAME: str = os.getenv("DB_NAME") or os.getenv("PGDATABASE", "bank_marketing")
+DB_USER: str = os.getenv("DB_USER") or os.getenv("PGUSER", "postgres")
+DB_PASSWORD: str = os.getenv("DB_PASSWORD") or os.getenv("PGPASSWORD", "postgres")
 
 # Railway y otras plataformas pueden proporcionar DATABASE_URL directamente
 # Si está disponible, usarla; si no, construirla desde variables individuales
@@ -48,6 +67,12 @@ if database_url_env:
         )
 else:
     # Construir desde variables individuales
+    # Validar que tenemos los valores necesarios
+    if IS_RAILWAY and not DB_HOST:
+        raise ValueError(
+            "En Railway, debes configurar DATABASE_URL o variables de entorno de PostgreSQL. "
+            "Usa: railway variables set DATABASE_URL='${{Postgres.DATABASE_URL}}' --service api"
+        )
     DATABASE_URL: str = (
         f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
