@@ -38,6 +38,18 @@ app = dash.Dash(
 
 app.title = "Bank Marketing - Model Dashboard"
 
+# Agregar ruta de healthcheck para Railway
+@app.server.route("/health")
+def health_check():
+    """Healthcheck endpoint para Railway."""
+    return {"status": "healthy", "service": "dashboard"}, 200
+
+# Agregar ruta /api/v1/health para compatibilidad con railway.json
+@app.server.route("/api/v1/health")
+def api_health_check():
+    """Healthcheck endpoint compatible con railway.json."""
+    return {"status": "healthy", "service": "dashboard"}, 200
+
 # Layout principal
 app.layout = dbc.Container([
     dcc.Interval(
