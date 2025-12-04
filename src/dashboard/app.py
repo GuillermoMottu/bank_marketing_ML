@@ -570,24 +570,54 @@ def make_prediction(n_clicks, model_type, architecture, *args):
     if model_type == "Deep" and architecture is None:
         return dbc.Alert("Por favor selecciona una arquitectura para Deep Learning.", color="warning")
     
-    # Construir payload
+    # Función auxiliar para convertir valores a tipos correctos
+    def safe_int(value, default=0, min_val=None, max_val=None):
+        """Convierte un valor a int de forma segura."""
+        if value is None:
+            return default
+        try:
+            val = int(float(value))  # Primero convertir a float para manejar strings "1.0"
+            if min_val is not None:
+                val = max(val, min_val)
+            if max_val is not None:
+                val = min(val, max_val)
+            return val
+        except (ValueError, TypeError):
+            return default
+    
+    def safe_float(value, default=0.0):
+        """Convierte un valor a float de forma segura."""
+        if value is None:
+            return default
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return default
+    
+    def safe_str(value, default=""):
+        """Convierte un valor a string de forma segura."""
+        if value is None:
+            return default
+        return str(value).strip()
+    
+    # Construir payload con validación y conversión de tipos
     input_data = {
-        "age": args[0],
-        "job": args[1],
-        "marital": args[2],
-        "education": args[3],
-        "default": args[4],
-        "balance": args[5],
-        "housing": args[6],
-        "loan": args[7],
-        "contact": args[8],
-        "day": args[9],
-        "month": args[10],
-        "duration": args[11],
-        "campaign": args[12],
-        "pdays": args[13],
-        "previous": args[14],
-        "poutcome": args[15],
+        "age": safe_int(args[0], default=30, min_val=0, max_val=120),
+        "job": safe_str(args[1], default="admin."),
+        "marital": safe_str(args[2], default="married"),
+        "education": safe_str(args[3], default="secondary"),
+        "default": safe_str(args[4], default="no"),
+        "balance": safe_float(args[5], default=0.0),
+        "housing": safe_str(args[6], default="no"),
+        "loan": safe_str(args[7], default="no"),
+        "contact": safe_str(args[8], default="unknown"),
+        "day": safe_int(args[9], default=1, min_val=1, max_val=31),
+        "month": safe_str(args[10], default="may"),
+        "duration": safe_int(args[11], default=0, min_val=0),
+        "campaign": safe_int(args[12], default=1, min_val=1),  # Debe ser >= 1
+        "pdays": safe_int(args[13], default=-1),
+        "previous": safe_int(args[14], default=0, min_val=0),
+        "poutcome": safe_str(args[15], default="unknown"),
         "model_type": model_type or "ML",
         "architecture": architecture if model_type == "Deep" else None,
     }
