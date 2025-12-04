@@ -641,8 +641,39 @@ def make_prediction(n_clicks, model_type, architecture, *args):
                 html.P(f"El cliente {'probablemente SÍ' if result['prediction'] == 1 else 'probablemente NO'} suscribirá un depósito."),
             ], color=color, className="mt-3")
     
+    except httpx.HTTPStatusError as e:
+        # Manejar errores HTTP específicos (422, 400, etc.)
+        if e.response.status_code == 422:
+            # Error de validación - mostrar detalles del error
+            try:
+                error_detail = e.response.json()
+                detail_msg = error_detail.get("detail", "Error de validación")
+                if isinstance(detail_msg, list):
+                    # Pydantic devuelve una lista de errores
+                    errors = []
+                    for err in detail_msg:
+                        field = err.get("loc", ["unknown"])[-1]
+                        msg = err.get("msg", "Error desconocido")
+                        errors.append(f"{field}: {msg}")
+                    error_text = "Errores de validación:\n" + "\n".join(errors)
+                else:
+                    error_text = str(detail_msg)
+                logger.error(f"Error de validación en predicción: {error_text}")
+                return dbc.Alert([
+                    html.H4("Error de Validación"),
+                    html.P("Los datos enviados no son válidos:"),
+                    html.Pre(error_text, style={"white-space": "pre-wrap", "font-size": "0.9em"})
+                ], color="danger", className="mt-3")
+            except:
+                logger.error(f"Error 422 en predicción: {e.response.text}")
+                return dbc.Alert(f"Error de validación: {e.response.text}", color="danger")
+        else:
+            logger.error(f"Error HTTP {e.response.status_code} en predicción: {e.response.text}")
+            return dbc.Alert(f"Error del servidor ({e.response.status_code}): {str(e)}", color="danger")
+    except httpx.TimeoutException:
+        return dbc.Alert("La solicitud está tomando más tiempo del esperado. Por favor intenta de nuevo.", color="warning")
     except Exception as e:
-        logger.error(f"Error en predicción: {e}")
+        logger.error(f"Error en predicción: {e}", exc_info=True)
         return dbc.Alert(f"Error al realizar la predicción: {str(e)}", color="danger")
 
 
